@@ -58,9 +58,9 @@ class Cycling extends Workout{
         return this.speed;
      }
 }
-const run1=new Running([39,-12],5.2,24,178);
-const cycling1=new Cycling([39,-12],27,95,523);
-console.log(run1,cycling1)
+// const run1=new Running([39,-12],5.2,24,178);
+// const cycling1=new Cycling([39,-12],27,95,523);
+// console.log(run1,cycling1)
 
 ////////////////////////////
 // APPLICATION ARCHITECTURE
@@ -70,7 +70,12 @@ class App{
     #mapEvent;
     #workout=[];
     constructor(){
-        this._getPosition();
+  // Get user's position
+  this._getPosition();
+
+       // get data from local storage
+  this._getLocalStorage();
+        // attach event handler
         form.addEventListener('submit',this._newWorkout.bind(this))
 
   inputType.addEventListener('change',this._toggleElevationField)
@@ -85,17 +90,25 @@ navigator.geolocation.getCurrentPosition(this._loadMap. bind(this),
 })
     }
     _loadMap(position){
-    const{latitude,longitude}=position.coords;
-    const coords=[latitude,longitude];
+  const{latitude,longitude}=position.coords;
+  const coords=[latitude,longitude];
 
-     this.#map = L.map('map').setView(coords, this.#mapZoomLevel);
+  // If a map was previously initialized, remove it to avoid the
+  // "Map container is already initialized" Leaflet error.
+  if (this.#map) this.#map.remove();
+
+   this.#map = L.map('map').setView(coords, this.#mapZoomLevel);
 
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 }).addTo(this.#map);
  // Handling click on map
    this.#map.on('click',this._showForm.bind(this));
-    }
+
+   this.#workout.forEach(work=>{
+        this._renderWorkoutMarker(work);
+       })
+  }
     _showForm(mapE){
         this.#mapEvent=mapE
         form.classList.remove('hidden');
@@ -108,6 +121,7 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         form.classList.add('hidden');
         setTimeout(()=>form.style.display='grid',1000); 
     }
+  
     _toggleElevationField(){
         inputElevation.closest('.form__row').classList.toggle('form__row--hidden');
       inputCadence.closest('.form__row').classList.toggle('form__row--hidden');
@@ -143,7 +157,7 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
           }
         // add new object to workout array
         this.#workout.push(workout);
-        console.log(workout)
+        
         // render workout on map as marker
 
           this._renderWorkoutMarker(workout);
@@ -153,6 +167,8 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
          this._renderWorkout(workout);
         //hide form + clear input fields
         this._hideForm();
+          // set llocal storage
+        this._setLocalStorage();
 
         // clear input fields
    inputDistance.value = inputDuration.value = inputCadence.value = inputElevation.value = '';
@@ -221,11 +237,11 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     }
     _moveToPopup(e){
         const workoutE1=e.target.closest('.workout');
-        console.log(workoutE1);
+       
          if(!workoutE1) return;
 
          const workout=this.#workout.find(work=>work.id=workoutE1.dataset.id);
-         console.log(workout);
+         
 
          this.#map.setView(workout.coords,this.#mapZoomLevel,{
             animate:true,
@@ -234,8 +250,28 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
             },
          });
          //using publick interface
-         workout.click();
+        //  workout.click();
     }
+    _setLocalStorage(){
+        localStorage.setItem('workouts',JSON.stringify(this.#workout));
+    }
+    _getLocalStorage(){
+       const data=JSON.parse(localStorage.getItem('workouts'));
+      
+
+       if(!data)return;
+
+       this.#workout=data;
+
+       this.#workout.forEach(work=>{
+        this._renderWorkout(work);
+       });
+      
+    }
+     reset(){
+        localStorage.removeItem('workouts');
+        location.reload()
+       }
 }
 
 const app=  new App();
